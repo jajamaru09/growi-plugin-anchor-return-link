@@ -1,5 +1,5 @@
 import config from './package.json' with { type: 'json' };
-import { rehypeAnchorReturnLink } from './src/index';
+import { remarkTagUserAnchors, rehypeAnchorReturnLink } from './src/index';
 
 type OptionsGenerator = (...args: any[]) => any;
 
@@ -17,6 +17,10 @@ const activate = (): void => {
     optionsGenerators.customGenerateViewOptions;
   optionsGenerators.customGenerateViewOptions = (...args: any[]) => {
     const options = (originalGenerateViewOptions ?? optionsGenerators.generateViewOptions)(...args);
+    // remarkTagUserAnchors must run first to tag user-written anchors
+    // before other remark plugins (e.g. remark-toc) add auto-generated links
+    options.remarkPlugins = options.remarkPlugins ?? [];
+    options.remarkPlugins.unshift(remarkTagUserAnchors);
     options.rehypePlugins = options.rehypePlugins ?? [];
     options.rehypePlugins.push(rehypeAnchorReturnLink);
     return options;
@@ -27,6 +31,8 @@ const activate = (): void => {
     optionsGenerators.customGeneratePreviewOptions;
   optionsGenerators.customGeneratePreviewOptions = (...args: any[]) => {
     const options = (originalGeneratePreviewOptions ?? optionsGenerators.generatePreviewOptions)(...args);
+    options.remarkPlugins = options.remarkPlugins ?? [];
+    options.remarkPlugins.unshift(remarkTagUserAnchors);
     options.rehypePlugins = options.rehypePlugins ?? [];
     options.rehypePlugins.push(rehypeAnchorReturnLink);
     return options;
