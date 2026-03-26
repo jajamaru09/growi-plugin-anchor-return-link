@@ -1,8 +1,27 @@
 import type { Plugin } from 'unified';
 import type { Root, Element } from 'hast';
+import type { Root as MdastRoot, Link } from 'mdast';
 import { visit } from 'unist-util-visit';
 
 const HEADING_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
+
+/**
+ * Remark plugin: marks user-written anchor links (#xxx) with a data attribute.
+ * Must run before other remark plugins (e.g. remark-toc) that auto-generate anchor links.
+ * The data-user-anchor attribute survives the mdast→hast conversion via hProperties.
+ */
+export const remarkTagUserAnchors: Plugin<[], MdastRoot> = () => {
+  return (tree: MdastRoot) => {
+    visit(tree, 'link', (node: Link) => {
+      if (node.url.startsWith('#') && node.url !== '#') {
+        node.data = node.data ?? {};
+        const hProps = (node.data.hProperties ?? {}) as Record<string, string>;
+        hProps.dataUserAnchor = 'true';
+        node.data.hProperties = hProps;
+      }
+    });
+  };
+};
 
 export const rehypeAnchorReturnLink: Plugin<[], Root> = () => {
   return (tree: Root) => {
@@ -16,11 +35,14 @@ export const rehypeAnchorReturnLink: Plugin<[], Root> = () => {
 
     if (headingIds.size === 0) return;
 
-    // Pass 2: Collect anchor links targeting headings and assign IDs
+    // Pass 2: Collect user-written anchor links targeting headings and assign IDs
     const anchorTargets = new Map<string, string>(); // decoded target -> anchor ref id
 
     visit(tree, 'element', (node: Element) => {
       if (node.tagName !== 'a') return;
+
+      // Only process user-written anchors (tagged by remarkTagUserAnchors)
+      if (node.properties?.dataUserAnchor !== 'true') return;
 
       const href = String(node.properties?.href ?? '');
       if (!href.startsWith('#') || href === '#') return;
@@ -33,12 +55,11 @@ export const rehypeAnchorReturnLink: Plugin<[], Root> = () => {
         target = rawTarget;
       }
 
-      // Only process anchors that target headings (skip footnotes, etc.)
+      // Only process anchors that target headings
       if (!headingIds.has(target)) return;
       if (anchorTargets.has(target)) return;
 
       const refId = `anchor-ref-${rawTarget}`;
-      node.properties = node.properties ?? {};
       node.properties.id = refId;
       anchorTargets.set(target, refId);
     });
