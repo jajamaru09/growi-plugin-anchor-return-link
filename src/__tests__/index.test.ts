@@ -66,6 +66,39 @@ describe('rehypeAnchorReturnLink', () => {
     expect(output).toContain('<code>code</code>');
   });
 
+  it('does not interfere with footnote references and back-links', () => {
+    const input = [
+      '<p>Text with a footnote<sup><a href="#fn-1" id="fnref-1">1</a></sup></p>',
+      '<section class="footnotes"><ol><li id="fn-1"><p>Footnote text <a href="#fnref-1">↩</a></p></li></ol></section>',
+    ].join('');
+    const output = process(input);
+    // Footnote reference ID must remain unchanged
+    expect(output).toContain('id="fnref-1"');
+    // Footnote back-link must remain unchanged
+    expect(output).toContain('href="#fnref-1"');
+    // Footnote definition ID must remain unchanged
+    expect(output).toContain('id="fn-1"');
+    // No return links should be added (footnotes are not headings)
+    expect(output).not.toContain('anchor-return-link');
+  });
+
+  it('processes anchor links to headings while leaving footnotes untouched', () => {
+    const input = [
+      '<p><a href="#section">go to section</a></p>',
+      '<p>Text with footnote<sup><a href="#fn-1" id="fnref-1">1</a></sup></p>',
+      '<h2 id="section">Section</h2>',
+      '<section class="footnotes"><ol><li id="fn-1"><p>Note <a href="#fnref-1">↩</a></p></li></ol></section>',
+    ].join('');
+    const output = process(input);
+    // Anchor return link should be added for the heading
+    expect(output).toContain('anchor-return-link');
+    expect(output).toContain('id="anchor-ref-section"');
+    // Footnote IDs must remain unchanged
+    expect(output).toContain('id="fnref-1"');
+    expect(output).toContain('id="fn-1"');
+    expect(output).toContain('href="#fnref-1"');
+  });
+
   it('works across h1-h6', () => {
     const input = '<p><a href="#h1">h1</a><a href="#h3">h3</a><a href="#h6">h6</a></p><h1 id="h1">H1</h1><h3 id="h3">H3</h3><h6 id="h6">H6</h6>';
     const output = process(input);
