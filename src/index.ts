@@ -6,7 +6,17 @@ const HEADING_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
 
 export const rehypeAnchorReturnLink: Plugin<[], Root> = () => {
   return (tree: Root) => {
-    // Pass 1: Collect anchor links and assign IDs
+    // Pass 1: Collect heading IDs
+    const headingIds = new Set<string>();
+    visit(tree, 'element', (node: Element) => {
+      if (!HEADING_TAGS.has(node.tagName)) return;
+      const id = String(node.properties?.id ?? '');
+      if (id) headingIds.add(id);
+    });
+
+    if (headingIds.size === 0) return;
+
+    // Pass 2: Collect anchor links targeting headings and assign IDs
     const anchorTargets = new Map<string, string>(); // decoded target -> anchor ref id
 
     visit(tree, 'element', (node: Element) => {
@@ -23,6 +33,8 @@ export const rehypeAnchorReturnLink: Plugin<[], Root> = () => {
         target = rawTarget;
       }
 
+      // Only process anchors that target headings (skip footnotes, etc.)
+      if (!headingIds.has(target)) return;
       if (anchorTargets.has(target)) return;
 
       const refId = `anchor-ref-${rawTarget}`;
@@ -33,7 +45,7 @@ export const rehypeAnchorReturnLink: Plugin<[], Root> = () => {
 
     if (anchorTargets.size === 0) return;
 
-    // Pass 2: Add return links to targeted headings
+    // Pass 3: Add return links to targeted headings
     visit(tree, 'element', (node: Element) => {
       if (!HEADING_TAGS.has(node.tagName)) return;
 
