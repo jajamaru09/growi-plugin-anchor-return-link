@@ -69,7 +69,12 @@ export const rehypeAnchorReturnLink: Plugin<[], Root> = () => {
       if (!matchedId) return;
       if (anchorTargets.has(matchedId)) return;
 
-      const refId = `anchor-ref-${rawTarget}`;
+      // Rewrite href to the actual heading ID so browser navigation works
+      if (decoded !== matchedId) {
+        node.properties.href = `#${matchedId}`;
+      }
+
+      const refId = `anchor-ref-${matchedId}`;
       node.properties.id = refId;
       anchorTargets.set(matchedId, refId);
     });
