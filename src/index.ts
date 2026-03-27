@@ -2,6 +2,7 @@ import type { Plugin } from 'unified';
 import type { Root, Element } from 'hast';
 import type { Root as MdastRoot, Link } from 'mdast';
 import { visit } from 'unist-util-visit';
+import { slug } from 'github-slugger';
 
 const HEADING_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
 
@@ -48,20 +49,29 @@ export const rehypeAnchorReturnLink: Plugin<[], Root> = () => {
       if (!href.startsWith('#') || href === '#') return;
 
       const rawTarget = href.slice(1);
-      let target: string;
+      let decoded: string;
       try {
-        target = decodeURIComponent(rawTarget);
+        decoded = decodeURIComponent(rawTarget);
       } catch {
-        target = rawTarget;
+        decoded = rawTarget;
       }
 
-      // Only process anchors that target headings
-      if (!headingIds.has(target)) return;
-      if (anchorTargets.has(target)) return;
+      // Match against heading IDs: try exact match first, then slugified
+      let matchedId: string | undefined;
+      if (headingIds.has(decoded)) {
+        matchedId = decoded;
+      } else {
+        const slugified = slug(decoded);
+        if (headingIds.has(slugified)) {
+          matchedId = slugified;
+        }
+      }
+      if (!matchedId) return;
+      if (anchorTargets.has(matchedId)) return;
 
       const refId = `anchor-ref-${rawTarget}`;
       node.properties.id = refId;
-      anchorTargets.set(target, refId);
+      anchorTargets.set(matchedId, refId);
     });
 
     if (anchorTargets.size === 0) return;

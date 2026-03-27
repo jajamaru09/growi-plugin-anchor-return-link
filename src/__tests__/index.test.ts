@@ -117,6 +117,43 @@ describe('rehypeAnchorReturnLink', () => {
     expect(output.match(/anchor-return-link/g)).toHaveLength(3);
   });
 
+  it('matches anchor with uppercase letters to lowercased heading ID', () => {
+    const input = `<p><a href="#Hello-World" ${ua}>go</a></p><h2 id="hello-world">Hello World</h2>`;
+    const output = processHtml(input);
+    expect(output).toContain('anchor-return-link');
+    expect(output).toContain('id="anchor-ref-Hello-World"');
+  });
+
+  it('matches anchor with spaces to hyphenated heading ID', () => {
+    const input = `<p><a href="#Hello World" ${ua}>go</a></p><h2 id="hello-world">Hello World</h2>`;
+    const output = processHtml(input);
+    expect(output).toContain('anchor-return-link');
+  });
+
+  it('matches anchor with Japanese text and special characters', () => {
+    const input = `<p><a href="#テスト（括弧）" ${ua}>go</a></p><h2 id="テスト括弧">テスト（括弧）</h2>`;
+    const output = processHtml(input);
+    expect(output).toContain('anchor-return-link');
+  });
+
+  it('matches anchor with mixed case and CJK characters', () => {
+    const input = `<p><a href="#ABC テスト" ${ua}>go</a></p><h2 id="abc-テスト">ABC テスト</h2>`;
+    const output = processHtml(input);
+    expect(output).toContain('anchor-return-link');
+  });
+
+  it('matches anchor with nakaguro (middle dot) in heading', () => {
+    const input = `<p><a href="#見出し・テスト" ${ua}>go</a></p><h2 id="見出しテスト">見出し・テスト</h2>`;
+    const output = processHtml(input);
+    expect(output).toContain('anchor-return-link');
+  });
+
+  it('still matches already-slugified anchors (exact match)', () => {
+    const input = `<p><a href="#hello-world" ${ua}>go</a></p><h2 id="hello-world">Hello World</h2>`;
+    const output = processHtml(input);
+    expect(output).toContain('anchor-return-link');
+  });
+
   it('ignores auto-generated ToC links (without data-user-anchor)', () => {
     const input = [
       '<ul><li><a href="#section1">Section 1</a></li><li><a href="#section2">Section 2</a></li></ul>',
