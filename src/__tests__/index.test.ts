@@ -62,6 +62,7 @@ describe('rehypeAnchorReturnLink', () => {
     const input = `<p><a href="#my%20section" ${ua}>go</a></p><h2 id="my section">My Section</h2>`;
     const output = processHtml(input);
     expect(output).toContain('anchor-return-link');
+    expect(output).toContain('id="anchor-ref-my section"');
   });
 
   it('does not add return link when heading does not exist', () => {
@@ -117,41 +118,59 @@ describe('rehypeAnchorReturnLink', () => {
     expect(output.match(/anchor-return-link/g)).toHaveLength(3);
   });
 
-  it('matches anchor with uppercase letters to lowercased heading ID', () => {
+  it('matches anchor with uppercase letters and rewrites href to heading ID', () => {
     const input = `<p><a href="#Hello-World" ${ua}>go</a></p><h2 id="hello-world">Hello World</h2>`;
     const output = processHtml(input);
     expect(output).toContain('anchor-return-link');
-    expect(output).toContain('id="anchor-ref-Hello-World"');
+    // href rewritten to match actual heading ID
+    expect(output).toContain('href="#hello-world"');
+    // refId uses the matched (slugified) heading ID
+    expect(output).toContain('id="anchor-ref-hello-world"');
   });
 
-  it('matches anchor with spaces to hyphenated heading ID', () => {
+  it('matches anchor with spaces and rewrites href to hyphenated heading ID', () => {
     const input = `<p><a href="#Hello World" ${ua}>go</a></p><h2 id="hello-world">Hello World</h2>`;
     const output = processHtml(input);
     expect(output).toContain('anchor-return-link');
+    expect(output).toContain('href="#hello-world"');
   });
 
   it('matches anchor with Japanese text and special characters', () => {
     const input = `<p><a href="#テスト（括弧）" ${ua}>go</a></p><h2 id="テスト括弧">テスト（括弧）</h2>`;
     const output = processHtml(input);
     expect(output).toContain('anchor-return-link');
+    expect(output).toContain('href="#テスト括弧"');
   });
 
   it('matches anchor with mixed case and CJK characters', () => {
     const input = `<p><a href="#ABC テスト" ${ua}>go</a></p><h2 id="abc-テスト">ABC テスト</h2>`;
     const output = processHtml(input);
     expect(output).toContain('anchor-return-link');
+    expect(output).toContain('href="#abc-テスト"');
   });
 
   it('matches anchor with nakaguro (middle dot) in heading', () => {
     const input = `<p><a href="#見出し・テスト" ${ua}>go</a></p><h2 id="見出しテスト">見出し・テスト</h2>`;
     const output = processHtml(input);
     expect(output).toContain('anchor-return-link');
+    expect(output).toContain('href="#見出しテスト"');
   });
 
-  it('still matches already-slugified anchors (exact match)', () => {
+  it('does not rewrite href when anchor already matches exactly', () => {
     const input = `<p><a href="#hello-world" ${ua}>go</a></p><h2 id="hello-world">Hello World</h2>`;
     const output = processHtml(input);
     expect(output).toContain('anchor-return-link');
+    expect(output).toContain('href="#hello-world"');
+  });
+
+  it('rewrites URL-encoded anchor with mixed case CJK to correct heading ID', () => {
+    const input = `<p><a href="#%E6%9D%91%E7%94%B0%E3%81%95%E3%82%93Fuga01" ${ua}>test</a></p><h1 id="村田さんfuga01">村田さんFuga01</h1>`;
+    const output = processHtml(input);
+    expect(output).toContain('anchor-return-link');
+    // href rewritten to the actual heading ID
+    expect(output).toContain('href="#村田さんfuga01"');
+    // refId uses the matched heading ID
+    expect(output).toContain('id="anchor-ref-村田さんfuga01"');
   });
 
   it('ignores auto-generated ToC links (without data-user-anchor)', () => {
