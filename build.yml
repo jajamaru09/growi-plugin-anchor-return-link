@@ -24,7 +24,7 @@ jobs:
         run: |
           git config user.name "gitea-actions[bot]"
           git config user.email "gitea-actions[bot]@noreply.localhost"
-          git add dist/
+          git add -f dist/
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
